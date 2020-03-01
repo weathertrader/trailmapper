@@ -1,5 +1,4 @@
 
-
 ###############################################################################
 # process_gps_files_to_csv.py
 # author: Craig Smith 
@@ -17,7 +16,6 @@
 # debugging: 
 #   - 
 ###############################################################################
-
 
 import os
 import glob
@@ -58,7 +56,7 @@ for f in range(0, n_files, 1):
             del line_split
         del line_strip
     file_open.close()
-    #os.system('mv -f '+file_temp+' '+dir_data_processed+'/')
+    os.system('mv -f '+file_temp+' '+dir_data_processed+'/')
 
 n_points = len(lon_list)
 n_points
@@ -74,22 +72,26 @@ print('found %s points ' %(n_points))
 #[lon_list, lat_list]
 
 # create a df
-points_df = pd.DataFrame(np.array([lon_list, lat_list]).T, index=np.arange(0, n_points, 1), columns=['lat', 'lon'])
-points_df.head()
-#points_df.index.name = 'index'
-# write to csv
-points_file_name = os.path.join(dir_work, 'points.csv')
-points_df.to_csv(points_file_name) 
- 
-# read from csv
-points_file_name = os.path.join(dir_work, 'points.csv')
-if not os.path.isfile(points_file_name):
-    print('ERROR - missing file')
-    
-points1_df = pd.read_csv(points_file_name,index_col=0)
-lon_array = np.array(points1_df['lon'])
-lat_array = np.array(points1_df['lat'])
+points_new_df = pd.DataFrame(np.array([lon_list, lat_list]).T, index=np.arange(0, n_points, 1), columns=['lat', 'lon'])
+points_new_df.head()
 
+# check for pre-existing file and append
+points_file_name = os.path.join(dir_work, 'points.csv')
+if os.path.isfile(points_file_name):
+    print('appending to existing file')
+    points_old_df = pd.read_csv(points_file_name,index_col=0)
+    #lon_array = np.array(points1_df['lon'])
+    #lat_array = np.array(points1_df['lat'])
+    points_old_df.append(points_new_df)
+else:
+    points_old_df = points_new_df
+del points_new_df
+
+# write to csv
+points_old_df.to_csv(points_file_name) 
+ 
+
+# parse dts
 #stn_read_df_matrix = stn_read_csv.as_matrix()
 #var_wrf_read   = stn_read_df_matrix
 #datetime_wrf_temp = stn_read_csv.index # object 
