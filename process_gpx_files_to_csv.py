@@ -19,7 +19,7 @@
 
 import os
 import glob
-import lxml
+#import lxml
 import numpy as np
 import pandas as pd
 
@@ -59,8 +59,6 @@ for f in range(0, n_files, 1):
     os.system('mv -f '+file_temp+' '+dir_data_processed+'/')
 
 n_points = len(lon_list)
-n_points
-
 print('found %s points ' %(n_points))
 
 #np.array(lon_list, dtype=float)
@@ -82,7 +80,7 @@ if os.path.isfile(points_file_name):
     points_old_df = pd.read_csv(points_file_name,index_col=0)
     #lon_array = np.array(points1_df['lon'])
     #lat_array = np.array(points1_df['lat'])
-    points_old_df.append(points_new_df)
+    points_old_df = points_old_df.append(points_new_df)
 else:
     points_old_df = points_new_df
 del points_new_df
