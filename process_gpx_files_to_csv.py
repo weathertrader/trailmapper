@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 
 # set working directory
-dir_work = '/home/craigmatthewsmith/gps_tracks/gps_tracks'
+dir_work = '/home/craigmatthewsmith/gps_tracks'
 os.chdir(dir_work)
 dir_data_raw       = os.path.join(dir_work, 'data_raw')
 dir_data_processed = os.path.join(dir_work, 'data_processed')
