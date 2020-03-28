@@ -19,7 +19,6 @@
 
 import os
 import glob
-#import lxml
 import numpy as np
 import pandas as pd
 
@@ -35,8 +34,10 @@ n_files = len(file_list)
 
 print('found %s files ' %(str(n_files).rjust(2,'0')))
 
-lon_list = []
-lat_list = []
+lon_list  = []
+lat_list  = []
+ele_list  = []
+time_list = []
 f = 0
 for f in range(0, n_files, 1):
     print('processing f %s ' %(str(f).rjust(2,'0')))
@@ -45,20 +46,29 @@ for f in range(0, n_files, 1):
     file_lines = file_open.readlines()
     n_lines = len(file_lines)
     n = 9 
+    #for n in range(0, 20 ,1): 
     for n in range(0, n_lines ,1): 
-        #print(config_lines[n])
-        line_strip = file_lines[n].strip()
+        #print(file_lines[n])
+        line_strip = file_lines[n] # .strip()
         #print (line_strip)
         if   ('<trkpt ' in line_strip):
             line_split = line_strip.split('"')
             lon_list.append(float(line_split[1]))
             lat_list.append(float(line_split[3]))
             del line_split
+        elif (' <ele>' in line_strip):
+            ele_list.append(float(line_strip.split('<')[1].split('>')[1]))
+        elif ('    <time>' in line_strip):
+            time_list.append(line_strip.split('<')[1].split('>')[1])
         del line_strip
     file_open.close()
-    os.system('mv -f '+file_temp+' '+dir_data_processed+'/')
+    #os.system('mv -f '+file_temp+' '+dir_data_processed+'/')
 
 n_points = len(lon_list)
+print('found %s points ' %(n_points))
+n_points = len(ele_list)
+print('found %s points ' %(n_points))
+n_points = len(time_list)
 print('found %s points ' %(n_points))
 
 #np.array(lon_list, dtype=float)
@@ -69,8 +79,17 @@ print('found %s points ' %(n_points))
 #type(temp1)
 #[lon_list, lat_list]
 
+
+#var_temp = np.array([lon_list, lat_list, ele_list, time_list]).T
+#columns_temp = ['lat', 'lon', 'ele', 'time']
+
+#np.shape(lon_list)
+#np.shape(lat_list)
+#np.shape(ele_list)
+#np.shape(time_list)
+
 # create a df
-points_new_df = pd.DataFrame(np.array([lon_list, lat_list]).T, index=np.arange(0, n_points, 1), columns=['lat', 'lon'])
+points_new_df = pd.DataFrame(np.array([lon_list, lat_list, ele_list, time_list]).T, index=np.arange(0, n_points, 1), columns=['lat', 'lon', 'ele', 'time'])
 points_new_df.head()
 
 # check for pre-existing file and append
@@ -88,7 +107,6 @@ del points_new_df
 # write to csv
 points_old_df.to_csv(points_file_name) 
  
-
 # parse dts
 #stn_read_df_matrix = stn_read_csv.as_matrix()
 #var_wrf_read   = stn_read_df_matrix
