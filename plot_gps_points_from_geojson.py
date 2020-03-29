@@ -49,9 +49,9 @@ else: # parse command line parameters
 # create new GeoJson objects to reduce GeoJSON data sent to Folium map as layer
 f_track = lambda x: {'color': '#FC4C02', 'weight': 5} # show some color...
 
-geojson_file_list = sorted(glob.glob(os.path.join(data_geojson, '*2017*.geojson')))
+geojson_file_list = sorted(glob.glob(os.path.join(data_geojson, '*.geojson')))
 n_files = len(geojson_file_list)
-print(n_files)                              
+print('found %s files ' %(n_files))                              
 
 cmap = cm.get_cmap('jet') # matplotlib colormap
 

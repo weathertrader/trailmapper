@@ -136,7 +136,11 @@ for f in range(0, n_files, 1):
     # rename and archive gpx file 
     gpx_file_name_archive = gpx_file_temp.replace(file_name,dt_data[0].strftime('%Y-%m-%d_%H-%M')).replace(data_input_raw,data_processed_gpx)        
     print('    gpx_file_name_archive is %s ' %(gpx_file_name_archive))
-    temp_command = 'mv -f '+gpx_file_temp+' '+gpx_file_name_archive
+    if (' ' in gpx_file_temp):
+        temp_command = 'mv -f "'+gpx_file_temp+'" '+gpx_file_name_archive
+    else:
+        temp_command = 'mv -f '+gpx_file_temp+' '+gpx_file_name_archive
+
     print('    temp_command is %s ' %(temp_command))    
     os.system(temp_command)
 
