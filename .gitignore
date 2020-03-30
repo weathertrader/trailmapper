@@ -1,5 +1,6 @@
 data_raw/
 data_processed_gpx/
+data_geojson/
 data_backup/
 deprecated/
 
