@@ -1,10 +1,11 @@
 
-# should work from cli
-# all args in cli
-# environment.yml should work
-# functional .gitignore 
-# functional README.md 
-# myroutemap
+# to do 
+# process all files 2017/07 to 2019/07/01
+# update and refine README.md, add installation and run instructions 
+# check that environment.yml works 
+# refine  points across all gpx
+# create a master geojson with refined points and attributes according to number of routes per point
+# rename to myroutemap
 
 # usage
 # python plot_gps_points_from_geojson.py --data_geojson=data_geojson
@@ -47,7 +48,8 @@ else: # parse command line parameters
 
 
 # create new GeoJson objects to reduce GeoJSON data sent to Folium map as layer
-f_track = lambda x: {'color': '#FC4C02', 'weight': 5} # show some color...
+f_track     = lambda x: {'color': '#FC4C02', 'weight': 5} # show some color...
+f_track_new = lambda x: {'color': '#061283', 'weight': 5} # show some color...
 
 geojson_file_list = sorted(glob.glob(os.path.join(data_geojson, '*.geojson')))
 n_files = len(geojson_file_list)
@@ -57,6 +59,7 @@ cmap = cm.get_cmap('jet') # matplotlib colormap
 
 
 features_tracks = []
+features_tracks_new = []
 features_elevation = []
 features_speed = []
 f = 0
@@ -74,7 +77,10 @@ for f in range(0, n_files, 1):
 
     for feature in geojson_data['features']:
         line = geojson.LineString(feature['geometry']['coordinates'])
-        features_tracks.append(geojson.Feature(geometry=line))
+        if (f < n_files-5):
+            features_tracks.append(geojson.Feature(geometry=line))
+        else:
+            features_tracks_new.append(geojson.Feature(geometry=line))
 
     cmin_elevation = min(feature['properties']['elevation'] for feature in geojson_data['features'])
     cmax_elevation = max(feature['properties']['elevation'] for feature in geojson_data['features'])
@@ -113,6 +119,9 @@ folium.GeoJson(geojson_data_speed, style_function=f_speed, tooltip=t_speed, name
 
 geojson_data_track = geojson.FeatureCollection(features_tracks)
 folium.GeoJson(geojson_data_track, style_function=f_track, name='Track only', show=True, smooth_factor=3.0).add_to(fmap)
+
+geojson_data_track_new = geojson.FeatureCollection(features_tracks_new)
+folium.GeoJson(geojson_data_track_new, style_function=f_track_new, name='Track only', show=True, smooth_factor=3.0).add_to(fmap)
 
 
 folium.LayerControl(collapsed=False).add_to(fmap)

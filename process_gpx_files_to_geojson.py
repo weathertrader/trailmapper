@@ -109,9 +109,9 @@ for f in range(0, n_files, 1):
         lat_lon_data = lat_lon_data[index, :]
         elevation_data = elevation_data[index]
         timestamp_data = timestamp_data[index]
-        distance_data = distance_data[index]
-        slope_data = slope_data[index]
-        speed_data = speed_data[index]
+        distance_data  = distance_data [index]
+        slope_data     = slope_data    [index]
+        speed_data     = speed_data    [index]
     slope_data = abs(slope_data*100) # decimal to %
 
     n_points = len(slope_data)

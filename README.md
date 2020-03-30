@@ -9,6 +9,10 @@
 1. [Questions?](README.md#questions?)
 
 
+Inline-style: 
+![alt text](example.png "hover text")
+
+
 ## Run Instructions 
 
 Clone the repo, enter the dictory and execute `./run.sh` from the cli.
