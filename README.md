@@ -1,19 +1,15 @@
 
 # My Route Map
 
-## Table of Contents
-1. [Installation](README.md#installation)
-1. [Run Instructions](README.md#Run-instructions)
-1. [Overview](README.md#Overview)
-1. [Tests](README.md#tests)
-1. [Questions?](README.md#questions?)
-
-## Overview
-
 Create a interactive map of all of your gps tracks 
 
 Inline-style: 
 ![alt text](example.png "hover text")
+
+## Table of Contents
+1. [Installation](README.md#installation)
+1. [Run Instructions](README.md#Run-instructions)
+1. [Questions?](README.md#questions?)
 
 ## Installation
 
