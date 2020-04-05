@@ -1,11 +1,57 @@
 
 # to do 
-# process all files 2017/07 to 2019/07/01
+
+# 2 hr  from raw_gpx, thinning points implement, refine points across all gpx
+#       count number of times each point has been visited 
+
+# 1 hr  understand and implement 
+#       calc_dist_between_two_coords(), calc_dist_between_points() and 
+#       calc_dist_from_coords_to_line(), calc_distance_between_point_and_line()
+
+# 2 hr  redo rdp algo on individual gpx  
+
+# 1 hr  write geojson, drop speed and slope data
+
+# 1 hr  plot colorbar shows number of visits
+#       plot can show heatmap or invididual  
+# 2 hr  repo structure, 
+#       cli implementation 
+#       process all
+
+# 2 hr add RAWS stations 
+
 # update and refine README.md, add installation and run instructions 
 # check that environment.yml works 
-# refine  points across all gpx
 # create a master geojson with refined points and attributes according to number of routes per point
+# add number of points to each geojson point 
+# add new routes to existing master route 
 # rename to myroutemap
+
+# script names 
+# process_gpx_to_geojson_individual - uses rdp to simply each gpx to geojson
+
+# process_all_gpx_to_master - read individual, apply rdp, aggregate all to single with visit counts 
+
+# process_new_tracks_add_to_existing_master - eliminates too close points, retains new points
+# plot_geojson, has flags for plot master and for individual 
+
+# cli options  
+# python script_name.py --data_geojson=data_geojson
+# --master_name=data_master/tracks_master.geosjon
+# --data_input_raw=data_input_raw 
+# --data_processed_gpx=data_processed_gpx 
+# --data_geojson=data_geojson
+
+# remove stopped points 
+If the magnitude of the time averaged velocity of an activity stream gets too low at any point, 
+subsequent points from that activity are filtered until the activity breaches a specific radius in distance
+ from the initial stopped point.
+
+https://github.com/remisalmon/Strava-to-GeoJSON/blob/master/strava_geojson.py
+rdp 
+https://github.com/fhirschmann/rdp/blob/master/rdp/__init__.py
+https://github.com/sebleier/RDP/blob/master/__init__.py
+
 
 # usage
 # python plot_gps_points_from_geojson.py --data_geojson=data_geojson
@@ -14,15 +60,12 @@
 import os
 import numpy as np
 import pandas as pd
-import argparse
-import numpy as np
 import matplotlib.cm as cm
 from scipy.signal import medfilt
 import argparse
 import glob
 from scipy.signal import medfilt
 
-import gpxpy
 import geopandas
 import geojson
 import folium
@@ -30,9 +73,6 @@ from folium import plugins
 import webbrowser
 
 from utils import rgb2hex
-from utils import calc_dist_from_coords
-from utils import calc_dist_from_coordsPoint2Line
-from utils import RDP
 
 #manual_debug = True
 manual_debug = False
@@ -74,7 +114,6 @@ for f in range(0, n_files, 1):
         geojson_data = geojson.load(file)
 
     #geojson_data
-
     for feature in geojson_data['features']:
         line = geojson.LineString(feature['geometry']['coordinates'])
         if (f < n_files-5):

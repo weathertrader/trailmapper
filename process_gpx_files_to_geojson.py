@@ -5,25 +5,14 @@
 import os
 import numpy as np
 import pandas as pd
-import folium
-from folium import plugins
-import geopandas
 import argparse
 import glob
 import gpxpy
 import geojson
-import webbrowser
 import numpy as np
-import matplotlib.cm as cm
-from scipy.signal import medfilt
-import argparse
-import glob
-
 from scipy.signal import medfilt
 
-from utils import rgb2hex
 from utils import calc_dist_from_coords
-from utils import calc_dist_from_coordsPoint2Line
 from utils import RDP
 
 #manual_debug = True
@@ -83,10 +72,11 @@ for f in range(0, n_files, 1):
     speed_data    = np.zeros([n_points]) # [m/s]
 
     for i in np.arange(1, n_points):
-        distance_data[i] = calc_dist_from_coords(lat_lon_data[i-1, :], lat_lon_data[i, :])
+        distance_data[i] = calc_dist_from_coords(lat_lon_data[i-1,:], lat_lon_data[i,:])
         delta_elevation = elevation_data[i]-elevation_data[i-1]
         if (distance_data[i] > 0):
             slope_data[i] = delta_elevation/distance_data[i]
+        # add elevation to distance
         distance_data[i] = np.sqrt(np.power(distance_data[i], 2.0)+np.power(delta_elevation, 2.0)) # recalculate distance to take slope into account
     for i in np.arange(1, timestamp_data.shape[0]):
         if (timestamp_data[i] != timestamp_data[i-1]):
@@ -101,7 +91,7 @@ for f in range(0, n_files, 1):
     
     use_RDP = True
     # use Ramer–Douglas–Peucker algorithm to reduce the number of trackpoints
-    if use_RDP:
+    if (use_RDP):
         epsilon = 1 # [m]
         tmp = np.hstack((lat_lon_data, np.arange(0, lat_lon_data.shape[0]).reshape((-1, 1)))) # hack
         tmp_new = RDP(tmp, epsilon) # remove trackpoints less than epsilon meters away from the new track
@@ -117,24 +107,33 @@ for f in range(0, n_files, 1):
     n_points = len(slope_data)
     print('    read %s points ' %(n_points))    
     
-    # create GeoJSON feature collection
+    # create geojson feature collection
     features = []
     for i in np.arange(1, n_points):
-        line = geojson.LineString([(lat_lon_data[i-1, 1], lat_lon_data[i-1, 0]), (lat_lon_data[i, 1], lat_lon_data[i, 0])]) # (lon,lat) to (lon,lat) format
+        line = geojson.LineString([(lat_lon_data[i-1,1], lat_lon_data[i-1,0]), (lat_lon_data[i,1], lat_lon_data[i,0])]) 
         feature = geojson.Feature(geometry=line, properties={'elevation': float('%.1f'%elevation_data[i]), 'slope': float('%.1f'%slope_data[i]), 'speed': float('%.1f'%speed_data[i])})
         features.append(feature)
 
     feature_collection = geojson.FeatureCollection(features)
 
+    #{"geometry": {"coordinates": [[-122.032592, 37.836804], [-122.032768, 37.836771]], "type": "LineString"}, 
+    #              "properties": {"elevation": 116.1, "slope": 0.6, "speed": 1.5}, "type": "Feature"},
+    #{"geometry": {"coordinates": [[-122.032768, 37.836771], [-122.032996, 37.836747]], "type": "LineString"}, 
+    #              "properties": {"elevation": 116.6, "slope": 2.5, "speed": 1.5}, "type": "Feature"},
+
     file_name = os.path.basename(gpx_file_temp.strip('.gpx'))
     # write geojson file
-    geojson_write_file = gpx_file_temp.replace(file_name,dt_data[0].strftime('%Y-%m-%d_%H-%M')).replace(data_input_raw,data_geojson).replace('.gpx','.geojson')        
+    geojson_write_file = gpx_file_temp.replace(file_name,dt_data[0].strftime('%Y-%m-%d_%H-%M')).replace(data_input_raw,data_geojson).replace('.gpx','.geojson')
     print('    geojson_write_file is %s ' %(geojson_write_file))
     with open(geojson_write_file, 'w') as file:
         geojson.dump(feature_collection, file)
 
     # rename and archive gpx file 
-    gpx_file_name_archive = gpx_file_temp.replace(file_name,dt_data[0].strftime('%Y-%m-%d_%H-%M')).replace(data_input_raw,data_processed_gpx)        
+    rename_gpx_file = True
+    if (rename_gpx_file):
+        gpx_file_name_archive = gpx_file_temp.replace(file_name,dt_data[0].strftime('%Y-%m-%d_%H-%M')).replace(data_input_raw,data_processed_gpx)        
+    else:
+        gpx_file_name_archive = gpx_file_temp.replace(data_input_raw,data_processed_gpx)        
     print('    gpx_file_name_archive is %s ' %(gpx_file_name_archive))
     if (' ' in gpx_file_temp):
         temp_command = 'mv -f "'+gpx_file_temp+'" '+gpx_file_name_archive
