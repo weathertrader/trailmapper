@@ -1,135 +1,205 @@
 
-
-# process_all_gpx_to_master - read individual, apply rdp, aggregate all to single with visit counts 
-
+# purpose 
+# read individual, apply rdp, aggregate all to single with visit counts 
 
 # usage
-# python plot_gps_points_from_geojson.py --data_geojson=data_geojson
+# python process_all_gpx_to_master.py --dir_gpx_processed=data/gpx_processed
 
 # imports
 import os
 import numpy as np
-import pandas as pd
-import matplotlib.cm as cm
-from scipy.signal import medfilt
+import folium
+import geopandas
 import argparse
 import glob
-from scipy.signal import medfilt
-
-import geopandas
+import gpxpy
 import geojson
-import folium
-from folium import plugins
 import webbrowser
+import matplotlib.cm as cm
+#from scipy.signal import medfilt
 
+from utils import calc_dist_from_coords
+from utils import RDP
 from utils import rgb2hex
+from utils import calc_dist_between_two_coords
+from utils import calc_dist_between_one_point_to_all_points
 
 #manual_debug = True
 manual_debug = False
 if (manual_debug):
-    #dir_work = '/home/craigmatthewsmith/gps_tracks'
-    #os.chdir(dir_work)
-    data_geojson       = 'data_geojson'
+    dir_work = '/home/craigmatthewsmith/gps_tracks'
+    os.chdir(dir_work)
+    dir_gpx_original  = 'data/gpx_original' 
+    dir_gpx_processed = 'data/gpx_processed' 
+    dir_geojson       = 'data/geojson'
 else: # parse command line parameters
     parser = argparse.ArgumentParser(description = 'process gpx files to geojson')
-    parser.add_argument('--data_geojson',       type=str, default='data_geojson',       help = 'output .geojson file')
+    parser.add_argument('--dir_gpx_processed', type=str, default='data/gpx_processed', help = 'data of gpx files')
     args = parser.parse_args()    
-    data_geojson       = args.data_geojson 
+    dir_gpx_processed = args.dir_gpx_processed 
 
 
-# create new GeoJson objects to reduce GeoJSON data sent to Folium map as layer
-f_track     = lambda x: {'color': '#FC4C02', 'weight': 5} # show some color...
-f_track_new = lambda x: {'color': '#061283', 'weight': 5} # show some color...
 
-geojson_file_list = sorted(glob.glob(os.path.join(data_geojson, '*.geojson')))
-n_files = len(geojson_file_list)
-print('found %s files ' %(n_files))                              
-
-cmap = cm.get_cmap('jet') # matplotlib colormap
+ingest_file_list = glob.glob(os.path.join(dir_gpx_processed, '*.gpx'))
+n_files = len(ingest_file_list)
+print('found %s files to process ' %(n_files))                              
 
 
-features_tracks = []
-features_tracks_new = []
-features_elevation = []
-features_speed = []
-f = 0
-#for f in range(0, 3, 1):
-#for f in range(n_files-50, n_files, 1):
-for f in range(0, n_files, 1):
-    geojson_file = geojson_file_list[f]
-    print('  reading f %s of %s ' %(f, n_files))
+
+use_RDP  = True
+epsilon  = 1.0 # [m]
+dist_min = 1.0 # 1.0, 75752 to 65536, 5386531 master.geojson file size 
+dist_max = 100.0 # dont plot lines this far away
+
+
+
+
+lat_all = []
+lon_all = []
+ele_all = []
+
+f = 100
+#for f in range(0, 20, 1):
+#for f in range(0, n_files, 1):
+for f in range(0, 50, 1):
+    if (f%10 == 0):
+        print('  processing f %s of %s ' %(f, n_files)) 
+
+    lat_lon_temp = []
+    lat_temp = []
+    lon_temp = []
+    ele_temp = []
+
+    gpx_file_temp = ingest_file_list[f]
+    # read GPX file
+    with open(gpx_file_temp, 'r') as file:
+        gpx = gpxpy.parse(file)
+        for track in gpx.tracks:
+            for segment in track.segments:
+                for point in segment.points:
+                    #lat_lon_temp.append([point.latitude, point.longitude])
+                    lon_temp.append([point.longitude])
+                    lat_temp.append([point.latitude])
+                    ele_temp.append(point.elevation)
+
+    #lat_lon_temp = np.array(lat_lon_temp)  # [deg, deg]
+    lon_temp = np.array(lon_temp) 
+    lat_temp = np.array(lat_temp) 
+    ele_temp = np.array(ele_temp) 
+
+    n_points = len(lon_temp)
+    #print('    read %s points ' %(n_points)) 
+    n_points_old = n_points
+
+    # use Ramer–Douglas–Peucker algorithm to reduce the number of trackpoints
+    if (use_RDP):
+        temp_array = np.hstack([lat_temp, lon_temp, np.arange(0, n_points, 1).reshape(-1, 1)])
+        temp_array_new = RDP(temp_array, epsilon) # remove trackpoints less than epsilon meters away from the new track
+        index = temp_array_new[:,2].astype(int) # hack
+        ele_temp = np.squeeze(ele_temp[index])
+        lon_temp = np.squeeze(lon_temp[index])
+        lat_temp = np.squeeze(lat_temp[index])
+        n_points = len(lon_temp)
+        #print('    reduced points from %s to %s ' %(n_points_old, n_points))    
+    if (f == 0):
+        lat_all = lat_temp
+        lon_all = lon_temp
+        ele_all = ele_temp
+    else: 
+        lat_all = np.hstack([lat_all, lat_temp])
+        lon_all = np.hstack([lon_all, lon_temp])
+        ele_all = np.hstack([ele_all, ele_temp])
+    del lon_temp, lat_temp, ele_temp        
+    n_points_all = len(lat_all)
+    #print('  %s total points ' %(n_points_all))    
+
+
+n_all = np.full([n_points_all], 0, dtype=int)
+print('%s total points ' %(n_points_all))    
+
+# count and reduce nearby points
+n = 10000
+for n in range(0, n_points_all, 1):
+    if (n%1000 == 0):
+        print('  processing n %s of %s ' %(n, n_points_all)) 
+    lat_temp = lat_all[n]
+    lon_temp = lon_all[n]
+    ele_temp = ele_all[n]
+    #print(lat_temp, lon_temp, ele_temp)
+    #dist_temp = (lat_all-lat_temp)**2.0 + (lon_all-lon_temp)**2
+    #print(np.shape(dist_temp))
+    #print(np.shape(dist_temp))
+    #print(np.min(dist_temp))
+    #print(np.max(dist_temp))
+    #dist_temp
+
+    if not (np.isnan(lon_temp)):
+        dist_temp = calc_dist_between_one_point_to_all_points(lon_temp, lat_temp, lon_all, lat_all)
+        index_close = np.argwhere(dist_temp < dist_min)
+        n_nearby_points = len(index_close)
+        #print('    found %s nearby points ' %(n_nearby_points)) 
+        if (n_nearby_points > 1):
+            lon_avg = np.mean(lon_all[index_close])
+            lat_avg = np.mean(lat_all[index_close])
+            ele_avg = np.mean(ele_all[index_close])
+            #print(lat_temp, lon_temp, ele_temp)
+            #print(lat_avg, lon_avg, ele_avg)
+            #print(index_close)
+            #print(lon_all[index_close])
+            #print(lat_all[index_close])
+            #print(ele_all[index_close])
+            lon_all[index_close] = np.nan
+            lat_all[index_close] = np.nan
+            ele_all[index_close] = np.nan
+            lon_all[n] = lon_avg
+            lat_all[n] = lat_avg
+            ele_all[n] = ele_avg
+            n_all  [n] = n_nearby_points
+            del lon_avg, lat_avg, ele_avg
+        del dist_temp, index_close, n_nearby_points
+
+
+
+n_points_all_old = n_points_all
+#print(np.shape(lat_all))
+mask = ~np.isnan(lat_all)
+lon_all = lon_all[mask] 
+lat_all = lat_all[mask] 
+ele_all = ele_all[mask] 
+n_all   =   n_all[mask] 
+n_points_all = len(lat_all)
+print('reduced points from %s to %s ' %(n_points_all_old, n_points_all))    
+
+
+# here need to check raw points vs thinned points on a map 
+# by default connect every adjancet point unless it is too far away
+features_thin = []
+
+n = 1000
+for n in range(1, n_points_all, 1):
+    if (n%1000 == 0):
+        print('  processing n %s of %s ' %(n, n_points_all)) 
+    dist_temp = calc_dist_between_two_coords(lon_all[n], lat_all[n], lon_all[n-1], lat_all[n-1])
+    n_temp = max(1, n_all[n])
+    if (dist_temp < dist_max):
+        line = geojson.LineString([(lon_all[n], lat_all[n]), (lon_all[n-1], lat_all[n-1])])     
+        feature = geojson.Feature(geometry=line, properties={'n_times': int('%.0f'%n_temp)})
+        #feature = geojson.Feature(geometry=line, properties={'n_times': int('%.0f'%n_times)})
+        features_thin.append(feature)
+        del n_temp, line, feature
     
-    # read geojson file
-    with open(geojson_file, 'r') as file:
-        geojson_data = geojson.load(file)
 
-    #geojson_data
-    for feature in geojson_data['features']:
-        line = geojson.LineString(feature['geometry']['coordinates'])
-        if (f < n_files-5):
-            features_tracks.append(geojson.Feature(geometry=line))
-        else:
-            features_tracks_new.append(geojson.Feature(geometry=line))
-
-    cmin_elevation = min(feature['properties']['elevation'] for feature in geojson_data['features'])
-    cmax_elevation = max(feature['properties']['elevation'] for feature in geojson_data['features'])
-    f_elevation = lambda x: {'color': rgb2hex(cmap((x['properties']['elevation']-cmin_elevation)/(cmax_elevation-cmin_elevation))), 'weight': 5} # cmap needs normalized data
-    t_elevation = folium.features.GeoJsonTooltip(fields=['elevation'], aliases=['Elevation (m)'])
-
-    for feature in geojson_data['features']:
-        line = geojson.LineString(feature['geometry']['coordinates'])
-        elevation = feature['properties']['elevation']
-        features_elevation.append(geojson.Feature(geometry=line, properties={'elevation': elevation}))
-
-    cmin_speed = min(feature['properties']['speed'] for feature in geojson_data['features'])
-    cmax_speed = max(feature['properties']['speed'] for feature in geojson_data['features'])
-    f_speed = lambda x: {'color': rgb2hex(cmap((x['properties']['speed']-cmin_speed)/(cmax_speed-cmin_speed))), 'weight': 5} # cmap needs normalized data
-    t_speed = folium.features.GeoJsonTooltip(fields=['speed'], aliases=['Speed '])
-
-    for feature in geojson_data['features']:
-        line = geojson.LineString(feature['geometry']['coordinates'])
-        speed = feature['properties']['speed']
-        features_speed.append(geojson.Feature(geometry=line, properties={'speed': speed}))
-
-print('creating map features to map ')
-
-#fmap = folium.Map(tiles='Stamen Terrain', prefer_canvas=True, disable_3d=True)
-fmap = folium.Map(tiles='Stamen Terrain', location=[37.862606, -121.978372], zoom_start=10) 
-folium.TileLayer(tiles = 'OpenStreetMap', name='OpenStreetMap', show=False).add_to(fmap)
-folium.TileLayer(tiles = 'Stamen Terrain', name='Terrain Map', show=True).add_to(fmap)
-
-print('appending features to map ')
-
-geojson_data_elevation = geojson.FeatureCollection(features_elevation)
-folium.GeoJson(geojson_data_elevation, style_function=f_elevation, tooltip=t_elevation, name='Elevation (m)', show=False, smooth_factor=3.0).add_to(fmap)
-        
-geojson_data_speed = geojson.FeatureCollection(features_speed)
-folium.GeoJson(geojson_data_speed, style_function=f_speed, tooltip=t_speed, name='Speed ', show=False, smooth_factor=3.0).add_to(fmap)
-
-geojson_data_track = geojson.FeatureCollection(features_tracks)
-folium.GeoJson(geojson_data_track, style_function=f_track, name='Track only', show=True, smooth_factor=3.0).add_to(fmap)
-
-geojson_data_track_new = geojson.FeatureCollection(features_tracks_new)
-folium.GeoJson(geojson_data_track_new, style_function=f_track_new, name='Track only', show=True, smooth_factor=3.0).add_to(fmap)
-
-
-folium.LayerControl(collapsed=False).add_to(fmap)
-
-print('saving map ')
-
-# save map to html file
-fmap.fit_bounds(fmap.get_bounds())
-
-#html_file = os.path.join(dir_work, 'index.html')
-html_file = 'index.html'
-if os.path.isfile(html_file):
-    os.system('rm -f '+html_file)
-fmap.save(html_file)
-
-print('opening map in browser ')
-# open html file in default browser
-webbrowser.open(html_file, new=2, autoraise=True)
-
+feature_collection_thin = geojson.FeatureCollection(features_thin)
+#file_name = 'master_thin.geojson'
+file_name = 'master_thin_min_'+str(int(dist_min))+'_max_'+str(int(dist_max))+'.geojson'
+#geojson_write_file = os.path.join(dir_work, file_name)
+geojson_write_file = file_name
+print('  geojson_write_file is %s ' %(geojson_write_file))
+if os.path.isfile(geojson_write_file):
+    temp_command = 'rm '+geojson_write_file
+    os.system(temp_command)
+with open(geojson_write_file, 'w') as file:
+    geojson.dump(feature_collection_thin, file)
 
 
 
