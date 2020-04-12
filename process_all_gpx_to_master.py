@@ -32,6 +32,7 @@ if (manual_debug):
     dir_gpx     = 'data/gpx' 
     dir_geojson = 'data/geojson'
 else: # parse command line parameters
+    dir_work = os.getcwd()
     parser = argparse.ArgumentParser(description = 'process gpx files to geojson')
     parser.add_argument('--dir_gpx',     type=str, default='data/gpx',     help = 'data of gpx files')
     parser.add_argument('--dir_geojson', type=str, default='data/geojson', help = 'data of geojson files')

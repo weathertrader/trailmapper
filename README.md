@@ -11,6 +11,7 @@ Inline-style:
 1. [Run Instructions](README.md#Run-instructions)
 1. [Scripts](README.md#Scripts)
 1. [To do](README.md#To-do)
+1. [References](README.md#References)
 
 ## Installation
 
@@ -30,11 +31,17 @@ Move the example.gpx file into the directory that contains files to process.
 
 Process the `gpx` file to geojson
 
-`python process_all_gpx_to_master.py --dir_gpx=data/gpx --dir_geojson=data/geojson`
+
+```
+python process_all_gpx_to_master.py --dir_gpx=data/gpx --dir_geojson=data/geojson
+```
+
 
 Plot the resulting data in a web browser 
 
-`python plot_gps_points_from_geojson.py --data_geojson=data/geojson`
+```
+python plot_master_geojson.py --dir_geojson=data/geojson
+```
 
 ## Scripts 
 
@@ -45,30 +52,39 @@ process_all_gpx_to_master.py
 process_all_gpx_to_master.ipynb
 ```
 
+plot master geojson tracks and recent individual tracks 
 ```
-plot_gps_points_from_geojson.ipynb
-
-```
-
-plots individual geojson file
-this functinality should move to plot_master and this script should be deprecated
-
-
-`plot_master_geojson.ipynb`
-reads a master geojson file and plots in a folium html map
-
-
-```
-plot_gps_points_from_geojson.py
 plot_master_geojson.py
+plot_master_geojson.ipynb
+
 ```
+
 
 ## To do 
 
-Show recent tracks on master map in different color
-Add trailheads 
-Add RAWS stations
-Center map in html page and adjust zoom 
+Map
+    Fix map zoom
+    redo map toggle layer on plot for master vs individual 
+    Show recent tracks on master map in different color    
+    Add Trailhead markers     
+    Add RAWS stations
+    Center map in html page and adjust zoom     
+    Fix the master geojson colormap so that saturation occurs at 10 
+
+Track processing
+    redo rdp algorithm on individual gpx  
+    remove stopped data using speed_min 
+
+Repo 
+    check that environment.yml works 
+    rename repo to myroutemap
+
+## References 
+
+https://github.com/remisalmon/Strava-to-GeoJSON/blob/master/strava_geojson.py
+https://github.com/fhirschmann/rdp/blob/master/rdp/__init__.py
+https://github.com/sebleier/RDP/blob/master/__init__.py
+
 
 
 
