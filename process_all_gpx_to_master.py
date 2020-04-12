@@ -8,8 +8,8 @@
 # imports
 import os
 import numpy as np
-import folium
-import geopandas
+#import folium
+#import geopandas
 import argparse
 import glob
 import gpxpy
