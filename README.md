@@ -26,58 +26,49 @@ Create the python environment and change to it
 
 Move the example.gpx file into the directory that contains files to process.
 
-`mv example.gpx data_input_raw/.`
+`mv example.gpx data/gpx/.`
 
 Process the `gpx` file to geojson
 
-`python process_gpx_files_to_geojson.py --data_input_raw=data_input_raw --data_processed_gpx=data_processed_gpx --data_geojson=data_geojson`
+`python process_all_gpx_to_master.py --dir_gpx=data/gpx --dir_geojson=data/geojson`
 
 Plot the resulting data in a web browser 
 
-`python plot_gps_points_from_geojson.py --data_geojson=data_geojson`
+`python plot_gps_points_from_geojson.py --data_geojson=data/geojson`
 
 ## Scripts 
 
-Ipython notebooks are 
+
+read individual gpx , apply rdp, write to geojson, aggregate all to single with visit counts 
+```
+process_all_gpx_to_master.py
+process_all_gpx_to_master.ipynb
+```
 
 ```
 plot_gps_points_from_geojson.ipynb
+
 ```
 
 plots individual geojson file
 this functinality should move to plot_master and this script should be deprecated
 
-```
-process_gps_points_to_geojson.ipynb
-```
-process each gpx individually to geojson and rename gpx and archive
-this functionality should move process_all_gpx_to_master and this script should be deprecated
-
-
-`process_all_gpx_to_master.ipynb` 
-process all gpx to a single master
-should this write individual geojson
-does not update existing master only can write over 
 
 `plot_master_geojson.ipynb`
 reads a master geojson file and plots in a folium html map
 
 
-Python scripts are 
 ```
-Apr  5 07:04 process_gpx_files_to_geojson.py
-Apr  5 07:28 plot_gps_points_from_geojson.py
-Apr  5 15:11 utils.py
-Apr  5 15:49 plot_master_geojson.py
-Apr 11 20:08 process_all_gpx_to_master.py
+plot_gps_points_from_geojson.py
+plot_master_geojson.py
 ```
 
 ## To do 
 
-Show recent tracks on master map 
+Show recent tracks on master map in different color
 Add trailheads 
 Add RAWS stations
-Center html 
+Center map in html page and adjust zoom 
 
 
 

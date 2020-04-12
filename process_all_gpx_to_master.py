@@ -1,9 +1,9 @@
 
 # purpose 
-# read individual, apply rdp, aggregate all to single with visit counts 
+# read individual, apply rdp, write to geojson, aggregate all to single with visit counts 
 
 # usage
-# python process_all_gpx_to_master.py --dir_gpx_processed=data/gpx_processed
+# python process_all_gpx_to_master.py --dir_gpx=data/gpx --dir_geojson=data/geojson
 
 # imports
 import os
@@ -14,8 +14,8 @@ import argparse
 import glob
 import gpxpy
 import geojson
-import webbrowser
-import matplotlib.cm as cm
+#import webbrowser
+#import matplotlib.cm as cm
 #from scipy.signal import medfilt
 
 from utils import calc_dist_from_coords
@@ -29,46 +29,56 @@ manual_debug = False
 if (manual_debug):
     dir_work = '/home/craigmatthewsmith/gps_tracks'
     os.chdir(dir_work)
-    dir_gpx_original  = 'data/gpx_original' 
-    dir_gpx_processed = 'data/gpx_processed' 
-    dir_geojson       = 'data/geojson'
+    dir_gpx     = 'data/gpx' 
+    dir_geojson = 'data/geojson'
 else: # parse command line parameters
     parser = argparse.ArgumentParser(description = 'process gpx files to geojson')
-    parser.add_argument('--dir_gpx_processed', type=str, default='data/gpx_processed', help = 'data of gpx files')
+    parser.add_argument('--dir_gpx',     type=str, default='data/gpx',     help = 'data of gpx files')
+    parser.add_argument('--dir_geojson', type=str, default='data/geojson', help = 'data of geojson files')
     args = parser.parse_args()    
-    dir_gpx_processed = args.dir_gpx_processed 
+    dir_gpx     = args.dir_gpx 
+    dir_geojson = args.dir_geojson 
 
+#gpx_file_temp = os.path.join(dir_work, 'data_input_gpx/Afternoon_Run55.gpx')
+#print(os.path.isfile(gpx_file_temp))
 
-
-ingest_file_list = glob.glob(os.path.join(dir_gpx_processed, '*.gpx'))
+ingest_file_list = glob.glob(os.path.join(dir_gpx, '*.gpx'))
 n_files = len(ingest_file_list)
 print('found %s files to process ' %(n_files))                              
-
+#print('found %s files' %(n_files))                              
+#geojson_file = os.path.join(data_geojson, '2020-03-22_15-06.geojson')
+#os.path.isfile(geojson_file)
 
 
 use_RDP  = True
-epsilon  = 1.0 # [m]
-dist_min = 1.0 # 1.0, 75752 to 65536, 5386531 master.geojson file size 
-dist_max = 100.0 # dont plot lines this far away
+epsilon  = 1.0 # rdp thinning 
+#dist_min_aggregate_points = 1.0 
+dist_min_aggregate_points = 3.0 
+#dist_min_aggregate_points = 10.0 
 
+#  1.0, reduced points from 75752 to 65536, 2.5 M master.geojson file size 
+# 10.0, reduced points from 75752 to 19330, 2.5 M master.geojson file size
 
+dist_max_between_points_to_make_line = 100.0 # dont plot lines this far away
 
 
 lat_all = []
 lon_all = []
 ele_all = []
+dt_all  = []
 
 f = 100
 #for f in range(0, 20, 1):
-#for f in range(0, n_files, 1):
-for f in range(0, 50, 1):
+#for f in range(0, 50, 1):
+for f in range(0, n_files, 1):
     if (f%10 == 0):
         print('  processing f %s of %s ' %(f, n_files)) 
 
-    lat_lon_temp = []
+    #lat_lon_temp = []
     lat_temp = []
     lon_temp = []
     ele_temp = []
+    dt_temp  = []
 
     gpx_file_temp = ingest_file_list[f]
     # read GPX file
@@ -81,11 +91,13 @@ for f in range(0, 50, 1):
                     lon_temp.append([point.longitude])
                     lat_temp.append([point.latitude])
                     ele_temp.append(point.elevation)
-
+                    dt_temp.append(point.time) # convert time to timestamps (s)
+          
     #lat_lon_temp = np.array(lat_lon_temp)  # [deg, deg]
     lon_temp = np.array(lon_temp) 
     lat_temp = np.array(lat_temp) 
     ele_temp = np.array(ele_temp) 
+    dt_temp  = np.array( dt_temp) 
 
     n_points = len(lon_temp)
     #print('    read %s points ' %(n_points)) 
@@ -99,23 +111,58 @@ for f in range(0, 50, 1):
         ele_temp = np.squeeze(ele_temp[index])
         lon_temp = np.squeeze(lon_temp[index])
         lat_temp = np.squeeze(lat_temp[index])
+        dt_temp  = np.squeeze( dt_temp[index])
         n_points = len(lon_temp)
-        #print('    reduced points from %s to %s ' %(n_points_old, n_points))    
+        #print('    reduced points from %s to %s ' %(n_points_old, n_points)) 
+                
+    # create GeoJSON feature collection
+    features = []
+    for i in np.arange(1, n_points):
+        # note csmith - not sure which way this should go 
+        line = geojson.LineString([(lon_temp[i-1], lat_temp[i-1]), (lon_temp[i], lat_temp[i])]) 
+        #line = geojson.LineString([(lat_temp[i-1], lon_temp[i-1]), (lat_temp[i], lon_temp[i])]) 
+        #line = geojson.LineString([(lat_lon_data[i-1, 1], lat_lon_data[i-1, 0]), (lat_lon_data[i, 1], lat_lon_data[i, 0])]) # (lon,lat) to (lon,lat) format
+        #feature = geojson.Feature(geometry=line, properties={'elevation': float('%.1f'%elevation_data[i]), 'slope': float('%.1f'%slope_data[i]), 'speed': float('%.1f'%speed_data[i])})
+        feature = geojson.Feature(geometry=line, properties={'date': ('%s'%dt_temp[i])})
+        features.append(feature)
+    feature_collection = geojson.FeatureCollection(features)
+
+    file_name = os.path.basename(gpx_file_temp.strip('.gpx'))
+    # write geojson file
+    geojson_write_file = gpx_file_temp.replace(file_name,dt_temp[0].strftime('%Y-%m-%d_%H-%M')).replace(dir_gpx,dir_geojson).replace('.gpx','.geojson')        
+    #print('    geojson_write_file is %s ' %(geojson_write_file))
+    with open(geojson_write_file, 'w') as file:
+        geojson.dump(feature_collection, file)
+
+    # rename and archive gpx file 
+    gpx_file_name_archive = gpx_file_temp.replace(file_name,dt_temp[0].strftime('%Y-%m-%d_%H-%M'))
+    #print('    gpx_file_name_archive is %s ' %(gpx_file_name_archive))
+    if (' ' in gpx_file_temp):
+        temp_command = 'mv -f "'+gpx_file_temp+'" '+gpx_file_name_archive
+    else:
+        temp_command = 'mv -f '+gpx_file_temp+' '+gpx_file_name_archive
+        
     if (f == 0):
         lat_all = lat_temp
         lon_all = lon_temp
         ele_all = ele_temp
+        dt_all  = dt_temp
     else: 
         lat_all = np.hstack([lat_all, lat_temp])
         lon_all = np.hstack([lon_all, lon_temp])
         ele_all = np.hstack([ele_all, ele_temp])
-    del lon_temp, lat_temp, ele_temp        
+        dt_all  = np.hstack([ dt_all,  dt_temp])
+    del lon_temp, lat_temp, ele_temp, dt_temp 
     n_points_all = len(lat_all)
     #print('  %s total points ' %(n_points_all))    
 
 
-n_all = np.full([n_points_all], 0, dtype=int)
+
 print('%s total points ' %(n_points_all))    
+n_time_visited = np.full([n_points_all], 1, dtype=int)
+
+
+
 
 # count and reduce nearby points
 n = 10000
@@ -135,7 +182,7 @@ for n in range(0, n_points_all, 1):
 
     if not (np.isnan(lon_temp)):
         dist_temp = calc_dist_between_one_point_to_all_points(lon_temp, lat_temp, lon_all, lat_all)
-        index_close = np.argwhere(dist_temp < dist_min)
+        index_close = np.argwhere(dist_temp < dist_min_aggregate_points)
         n_nearby_points = len(index_close)
         #print('    found %s nearby points ' %(n_nearby_points)) 
         if (n_nearby_points > 1):
@@ -154,10 +201,13 @@ for n in range(0, n_points_all, 1):
             lon_all[n] = lon_avg
             lat_all[n] = lat_avg
             ele_all[n] = ele_avg
-            n_all  [n] = n_nearby_points
+            n_time_visited[n] = n_nearby_points
             del lon_avg, lat_avg, ele_avg
         del dist_temp, index_close, n_nearby_points
 
+
+print(np.nanmin(n_time_visited))
+print(np.nanmax(n_time_visited))
 
 
 n_points_all_old = n_points_all
@@ -166,13 +216,18 @@ mask = ~np.isnan(lat_all)
 lon_all = lon_all[mask] 
 lat_all = lat_all[mask] 
 ele_all = ele_all[mask] 
-n_all   =   n_all[mask] 
+n_time_visited = n_time_visited[mask] 
 n_points_all = len(lat_all)
 print('reduced points from %s to %s ' %(n_points_all_old, n_points_all))    
 
 
-# here need to check raw points vs thinned points on a map 
-# by default connect every adjancet point unless it is too far away
+print(np.nanmin(n_time_visited))
+print(np.nanmax(n_time_visited))
+print(np.shape(lon_all))
+print(np.shape(n_time_visited))
+
+
+# only connect adjacent points, dont connect points from separate tracks 
 features_thin = []
 
 n = 1000
@@ -180,8 +235,8 @@ for n in range(1, n_points_all, 1):
     if (n%1000 == 0):
         print('  processing n %s of %s ' %(n, n_points_all)) 
     dist_temp = calc_dist_between_two_coords(lon_all[n], lat_all[n], lon_all[n-1], lat_all[n-1])
-    n_temp = max(1, n_all[n])
-    if (dist_temp < dist_max):
+    n_temp = max(1, n_time_visited[n])
+    if (dist_temp < dist_max_between_points_to_make_line):
         line = geojson.LineString([(lon_all[n], lat_all[n]), (lon_all[n-1], lat_all[n-1])])     
         feature = geojson.Feature(geometry=line, properties={'n_times': int('%.0f'%n_temp)})
         #feature = geojson.Feature(geometry=line, properties={'n_times': int('%.0f'%n_times)})
@@ -189,17 +244,19 @@ for n in range(1, n_points_all, 1):
         del n_temp, line, feature
     
 
+
 feature_collection_thin = geojson.FeatureCollection(features_thin)
 #file_name = 'master_thin.geojson'
-file_name = 'master_thin_min_'+str(int(dist_min))+'_max_'+str(int(dist_max))+'.geojson'
-#geojson_write_file = os.path.join(dir_work, file_name)
-geojson_write_file = file_name
+file_name = 'master_thin_min_'+str(int(dist_min_aggregate_points))+'_max_'+str(int(dist_max_between_points_to_make_line))+'.geojson'
+geojson_write_file = os.path.join(dir_work, file_name)
 print('  geojson_write_file is %s ' %(geojson_write_file))
 if os.path.isfile(geojson_write_file):
     temp_command = 'rm '+geojson_write_file
     os.system(temp_command)
 with open(geojson_write_file, 'w') as file:
     geojson.dump(feature_collection_thin, file)
+
+
 
 
 
