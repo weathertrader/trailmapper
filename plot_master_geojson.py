@@ -19,6 +19,7 @@ import geojson
 import webbrowser
 import matplotlib.cm as cm
 #from scipy.signal import medfilt
+import pandas as pd
 
 from utils import calc_dist_from_coords
 from utils import RDP
@@ -51,8 +52,50 @@ dist_min_aggregate_points = 3.0
 dist_max_between_points_to_make_line = 100.0 # dont plot lines this far away
 
 dt_now = dt.now()
-n_recent_days_to_plot_individually = 30
+# last updated 2020/05/01
+n_recent_days_to_plot_individually = 90
 
+trailheads_file = 'trailheads.csv'
+# read trailheads file
+trailheads_csv = pd.read_csv(trailheads_file,index_col=0)
+#trailheads_matrix = stn_read_csv.as_matrix()
+trailheads_csv.head()
+
+#th_lon = [-121.95168, -121.96682, -121.97457]
+#th_lat = [37.83386, 37.85792, 37.8524]
+
+th_lat = [
+    37.8694,
+    37.84743,
+    37.8628, 
+    37.87572,
+    37.87586,
+    37.88652, 
+    37.88754, 
+    37.87056, 
+    37.8501, 
+    37.85977, 
+    37.85792,
+    37.83386,
+    37.8524]
+
+th_lon = [
+    -121.9973,
+    -121.98593,
+    -121.9791,
+    -122.02286,
+    -122.01466,
+    -122.01799,
+    -122.01429,
+    -122.01017,
+    -121.99069,
+    -121.98874,
+    -121.96682,
+    -121.95168,
+    -121.97457]
+
+
+n_th = len(th_lat)
 
 # find recent geojson files
 geojson_file_list_recent = []
@@ -123,35 +166,45 @@ cmax_n_times = max(feature['properties']['n_times'] for feature in geojson_data[
 print(cmin_n_times)
 print(cmax_n_times)
 
+# '#FC4C02'
 # create new GeoJson objects to reduce GeoJSON data sent to Folium map as layer
-style_track   = lambda x: {'color': '#FC4C02', 'weight': 5} # show some color...
+style_track   = lambda x: {'color': '#11f52f', 'weight': 5} # show some color...
 style_n_times = lambda x: {'color': rgb2hex(cmap((x['properties']['n_times']-cmin_n_times)/(cmax_n_times-cmin_n_times))), 'weight': 5} # cmap needs normalized data
 tooltip_n_times = folium.features.GeoJsonTooltip(fields=['n_times'], aliases=['n_times'])
+
+
+#fmap = folium.Map(location = [53.545612, -113.490067], zoom_start= 10.5)
+#fmap = folium.Map(location=[37.862606, -121.978372], tiles='Stamen Terrain', zoom_start=11, control_scale=True)
+fmap = folium.Map(location=[37.862606, -121.978372], tiles='Stamen Terrain', zoom_start=13, control_scale=True)
 
 # set up Folium map
 #fmap = folium.Map(tiles = None, prefer_canvas=True, disable_3d=True)
 #fmap = folium.Map(tiles='Stamen Terrain', prefer_canvas=True, disable_3d=True)
-fmap = folium.Map(tiles='Stamen Terrain', location=[37.862606, -121.978372], zoom_start=10) 
+#fmap = folium.Map(tiles='Stamen Terrain', name='Terrain Map', location=[34.862606, -121.978372], zoom_start=10) 
+# folium.TileLayer(tiles = 'Stamen Terrain', name='Terrain Map', show=True).add_to(fmap)
+folium.TileLayer(tiles = 'CartoDB dark_matter', name='CartoDB', show=False).add_to(fmap)
 folium.TileLayer(tiles = 'OpenStreetMap', name='OpenStreetMap', show=False).add_to(fmap)
-folium.TileLayer(tiles = 'Stamen Terrain', name='Terrain Map', show=True).add_to(fmap)
 cmap = cm.get_cmap('jet') # matplotlib colormap
 print('appending features to map ')
 
-folium.GeoJson(geojson_data_track,   style_function=style_track, name='track', show=True, smooth_factor=3.0).add_to(fmap)
-folium.GeoJson(geojson_data_n_times, style_function=style_n_times, tooltip=tooltip_n_times, name='n_times', show=False, smooth_factor=3.0).add_to(fmap)
-        
+# add heatmap
+#folium.GeoJson(geojson_data_track,   style_function=style_track, name='track', show=True, smooth_factor=3.0).add_to(fmap)
+folium.GeoJson(geojson_data_n_times, style_function=style_n_times, tooltip=tooltip_n_times, name='n_times', show=True, smooth_factor=3.0).add_to(fmap)
+# add th
+for n in range(0, n_th, 1):
+    #folium.Marker([th_lat[n], th_lon[n]]).add_to(fmap)
+    #folium.Marker([th_lat[n], th_lon[n]], fill_color='#43d9de', radius=8).add_to(fmap)
+    folium.Marker([th_lat[n], th_lon[n]], fill_color='#43d9de', radius=4).add_to(fmap)
+    # popup=df_counters['Name'][point], icon=folium.Icon(color='darkblue', icon_color='white', icon='male', angle=0, prefix='fa')).add_to(marker_cluster)
 
-
+# add recent tracks        
 folium.GeoJson(geojson_data_track_recent, style_function=style_track, name='Recent tracks', show=True, smooth_factor=3.0).add_to(fmap)
-
-
-
 
 # add layer control widget
 folium.LayerControl(collapsed=False).add_to(fmap)
 
 # save map to html file
-fmap.fit_bounds(fmap.get_bounds())
+#fmap.fit_bounds(fmap.get_bounds())
 
 #html_file = os.path.join(dir_work, 'heatmap.html')
 #html_file = 'heatmap_'+str(int(dist_min))+'_max_'+str(int(dist_max))+'.html'

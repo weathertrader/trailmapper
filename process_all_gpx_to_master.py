@@ -8,6 +8,7 @@
 # imports
 import os
 import numpy as np
+import time 
 #import folium
 #import geopandas
 import argparse
@@ -62,6 +63,8 @@ dist_min_aggregate_points = 3.0
 
 dist_max_between_points_to_make_line = 100.0 # dont plot lines this far away
 
+process_name = 'process_files'
+time_start = time.time()
 
 lat_all = []
 lon_all = []
@@ -137,11 +140,13 @@ for f in range(0, n_files, 1):
 
     # rename and archive gpx file 
     gpx_file_name_archive = gpx_file_temp.replace(file_name,dt_temp[0].strftime('%Y-%m-%d_%H-%M'))
-    #print('    gpx_file_name_archive is %s ' %(gpx_file_name_archive))
-    if (' ' in gpx_file_temp):
-        temp_command = 'mv -f "'+gpx_file_temp+'" '+gpx_file_name_archive
-    else:
-        temp_command = 'mv -f '+gpx_file_temp+' '+gpx_file_name_archive
+    # print('    gpx_file_name_archive is %s ' %(gpx_file_name_archive))
+    if not (gpx_file_temp == gpx_file_name_archive):
+        if (' ' in gpx_file_temp):
+            temp_command = 'mv -f "'+gpx_file_temp+'" '+gpx_file_name_archive
+        else:
+            temp_command = 'mv -f '+gpx_file_temp+' '+gpx_file_name_archive
+        os.system(temp_command)
         
     if (f == 0):
         lat_all = lat_temp
@@ -157,18 +162,22 @@ for f in range(0, n_files, 1):
     n_points_all = len(lat_all)
     #print('  %s total points ' %(n_points_all))    
 
-
-
 print('%s total points ' %(n_points_all))    
 n_time_visited = np.full([n_points_all], 1, dtype=int)
 
+time_end   = time.time()
+process_dt = (time_end-time_start)/60.0
+print(process_name+' took %5.2f min' %(process_dt))
 
 
+
+process_name = 'thin nearby points'
+time_start = time.time()
 
 # count and reduce nearby points
 n = 10000
 for n in range(0, n_points_all, 1):
-    if (n%1000 == 0):
+    if (n%10000 == 0):
         print('  processing n %s of %s ' %(n, n_points_all)) 
     lat_temp = lat_all[n]
     lon_temp = lon_all[n]
@@ -221,6 +230,11 @@ n_time_visited = n_time_visited[mask]
 n_points_all = len(lat_all)
 print('reduced points from %s to %s ' %(n_points_all_old, n_points_all))    
 
+time_end   = time.time()
+process_dt = (time_end-time_start)/60.0
+print(process_name+' took %5.2f min' %(process_dt))
+
+
 
 print(np.nanmin(n_time_visited))
 print(np.nanmax(n_time_visited))
@@ -228,12 +242,15 @@ print(np.shape(lon_all))
 print(np.shape(n_time_visited))
 
 
+process_name = 'connect adjacent points'
+time_start = time.time()
+
 # only connect adjacent points, dont connect points from separate tracks 
 features_thin = []
 
 n = 1000
 for n in range(1, n_points_all, 1):
-    if (n%1000 == 0):
+    if (n%10000 == 0):
         print('  processing n %s of %s ' %(n, n_points_all)) 
     dist_temp = calc_dist_between_two_coords(lon_all[n], lat_all[n], lon_all[n-1], lat_all[n-1])
     n_temp = max(1, n_time_visited[n])
@@ -244,6 +261,14 @@ for n in range(1, n_points_all, 1):
         features_thin.append(feature)
         del n_temp, line, feature
     
+
+time_end   = time.time()
+process_dt = (time_end-time_start)/60.0
+print(process_name+' took %5.2f min' %(process_dt))
+
+
+process_name = 'write master geojson file'
+time_start = time.time()
 
 
 feature_collection_thin = geojson.FeatureCollection(features_thin)
@@ -258,6 +283,9 @@ with open(geojson_write_file, 'w') as file:
     geojson.dump(feature_collection_thin, file)
 
 
+time_end   = time.time()
+process_dt = (time_end-time_start)/60.0
+print(process_name+' took %5.2f min' %(process_dt))
 
 
 

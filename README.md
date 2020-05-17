@@ -59,17 +59,14 @@ plot_master_geojson.ipynb
 
 ```
 
-
 ## To do 
 
 ### Map
-1. Fix map zoom
-2. redo map toggle layer on plot for master vs individual 
-3. Show recent tracks on master map in different color    
-4. Add Trailhead markers     
-5. Add RAWS stations
-6. Center map in html page and adjust zoom     
-7. Fix the master geojson colormap so that saturation occurs at 10 
+1. Add RAWS stations
+2. Fix the master geojson colormap so that saturation occurs at 10 
+3. grab tracks via API instead of manually 
+4. thin points
+5. add junctions 
 
 ### Track processing
 - redo rdp algorithm on individual gpx  
