@@ -1,4 +1,10 @@
 
+# 1.2 min process_files 
+# 4.8 min thin nearby points took  
+# 0.1 min connect adjacent points took 
+# 0.1 write master geojson file took 
+
+
 # purpose 
 # read individual, apply rdp, write to geojson, aggregate all to single with visit counts 
 
@@ -53,14 +59,26 @@ print('found %s files to process ' %(n_files))
 
 
 use_RDP  = True
-epsilon  = 1.0 # rdp thinning 
+# rdp thinning 
+# eps  0.1 133466 total points, too slow
+# eps  1.0  81272 total points 
+# eps  3.0  48215 total points, spotty and not connected 
+# eps 10.0  22168 total points, spotty and not connected 
+#epsilon  =  0.1 # 0.1 is too slow
+epsilon  =  1.0 
+
 #dist_min_aggregate_points = 1.0 
 dist_min_aggregate_points = 3.0 
 #dist_min_aggregate_points = 10.0 
 
-#  1.0, reduced points from 75752 to 65536, 2.5 M master.geojson file size 
-# 10.0, reduced points from 75752 to 19330, 2.5 M master.geojson file size
 
+# 10.0 reduced points from 81272 to 20192 
+# thin nearby points took  2.05 min
+
+
+
+#dist_max_between_points_to_make_line =  1.0 # dont plot lines this far away
+#dist_max_between_points_to_make_line = 10.0 # dont plot lines this far away
 dist_max_between_points_to_make_line = 100.0 # dont plot lines this far away
 
 process_name = 'process_files'
@@ -75,7 +93,7 @@ f = 100
 #for f in range(0, 20, 1):
 #for f in range(0, 50, 1):
 for f in range(0, n_files, 1):
-    if (f%10 == 0):
+    if (f%20 == 0):
         print('  processing f %s of %s ' %(f, n_files)) 
 
     #lat_lon_temp = []
@@ -162,7 +180,7 @@ for f in range(0, n_files, 1):
     n_points_all = len(lat_all)
     #print('  %s total points ' %(n_points_all))    
 
-print('%s total points ' %(n_points_all))    
+print('eps %5.1f %s total points ' %(epsilon, n_points_all))    
 n_time_visited = np.full([n_points_all], 1, dtype=int)
 
 time_end   = time.time()
@@ -215,9 +233,7 @@ for n in range(0, n_points_all, 1):
             del lon_avg, lat_avg, ele_avg
         del dist_temp, index_close, n_nearby_points
 
-
-print(np.nanmin(n_time_visited))
-print(np.nanmax(n_time_visited))
+print('n_times visited ranges from %5.0f - %5.0f' % (np.nanmin(n_time_visited), np.nanmax(n_time_visited)))
 
 
 n_points_all_old = n_points_all
@@ -228,19 +244,11 @@ lat_all = lat_all[mask]
 ele_all = ele_all[mask] 
 n_time_visited = n_time_visited[mask] 
 n_points_all = len(lat_all)
-print('reduced points from %s to %s ' %(n_points_all_old, n_points_all))    
+print('%s dist_min reduced points from %s to %s ' %(dist_min_aggregate_points, n_points_all_old, n_points_all))    
 
 time_end   = time.time()
 process_dt = (time_end-time_start)/60.0
 print(process_name+' took %5.2f min' %(process_dt))
-
-
-
-print(np.nanmin(n_time_visited))
-print(np.nanmax(n_time_visited))
-print(np.shape(lon_all))
-print(np.shape(n_time_visited))
-
 
 process_name = 'connect adjacent points'
 time_start = time.time()

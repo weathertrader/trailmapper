@@ -52,8 +52,6 @@ dist_min_aggregate_points = 3.0
 dist_max_between_points_to_make_line = 100.0 # dont plot lines this far away
 
 dt_now = dt.now()
-# last updated 2020/05/01
-n_recent_days_to_plot_individually = 90
 
 trailheads_file = 'trailheads.csv'
 # read trailheads file
@@ -94,11 +92,17 @@ th_lon = [
     -121.95168,
     -121.97457]
 
-
 n_th = len(th_lat)
 
+
+# last updated 2020/05/16
+n_recent_days1 = 90
+n_recent_days2 =  7 
+
+
 # find recent geojson files
-geojson_file_list_recent = []
+geojson_file_list_recent1 = []
+geojson_file_list_recent2 = []
 
 geojson_file_list_all = glob.glob(os.path.join(dir_geojson, '*.geojson'))
 n_files = len(geojson_file_list_all)
@@ -114,20 +118,20 @@ for n in range(0, n_files, 1):
     #print(dt_temp)
     days_delta = (dt_now - dt_temp).days
     #print(days_delta)
-    if (days_delta <= n_recent_days_to_plot_individually):
-        geojson_file_list_recent.append(file_temp)
+    if (days_delta <= n_recent_days2):
+        geojson_file_list_recent2.append(file_temp)
+    if (days_delta > n_recent_days2 and days_delta <= n_recent_days1):
+        geojson_file_list_recent1.append(file_temp)
 
-n_files = len(geojson_file_list_recent)
-print(n_files)     
+n_files1 = len(geojson_file_list_recent1)
+n_files2 = len(geojson_file_list_recent2)
+print('found %s recent files' %(n_files1))                              
+print('found %s recent files' %(n_files2)) 
 
-#print('found %s files' %(n_files))                              
-#geojson_file = os.path.join(data_geojson, '2020-03-22_15-06.geojson')
-#os.path.isfile(geojson_file)
-
-features_tracks_recent = []
+features_tracks_recent1 = []
 f = 0
-for f in range(0, n_files, 1):
-    geojson_file = geojson_file_list_recent[f]
+for f in range(0, n_files1, 1):
+    geojson_file = geojson_file_list_recent1[f]
     print('  processing f %s of %s ' %(f, n_files))
     # read geojson file
     with open(geojson_file, 'r') as file:
@@ -135,14 +139,29 @@ for f in range(0, n_files, 1):
     #geojson_data
     for feature in geojson_data['features']:
         line = geojson.LineString(feature['geometry']['coordinates'])
-        features_tracks_recent.append(geojson.Feature(geometry=line))        
+        features_tracks_recent1.append(geojson.Feature(geometry=line))        
+
+features_tracks_recent2 = []
+f = 0
+for f in range(0, n_files2, 1):
+    geojson_file = geojson_file_list_recent2[f]
+    print('  processing f %s of %s ' %(f, n_files))
+    # read geojson file
+    with open(geojson_file, 'r') as file:
+        geojson_data = geojson.load(file)    
+    #geojson_data
+    for feature in geojson_data['features']:
+        line = geojson.LineString(feature['geometry']['coordinates'])
+        features_tracks_recent2.append(geojson.Feature(geometry=line))        
+
         
-geojson_data_track_recent = geojson.FeatureCollection(features_tracks_recent)
+geojson_data_track_recent1 = geojson.FeatureCollection(features_tracks_recent1)
+geojson_data_track_recent2 = geojson.FeatureCollection(features_tracks_recent2)
     
 #geojson_file = os.path.join(dir_work, 'master_thin.geojson')
 geojson_file = 'master_thin_min_'+str(int(dist_min_aggregate_points))+'_max_'+str(int(dist_max_between_points_to_make_line))+'.geojson'
 
-print(os.path.isfile(geojson_file))
+# print(os.path.isfile(geojson_file))
 
 # read geojson file
 with open(geojson_file, 'r') as file:
@@ -162,14 +181,18 @@ geojson_data_n_times = geojson.FeatureCollection(features_n_times)
     
 cmin_n_times = min(feature['properties']['n_times'] for feature in geojson_data['features'])
 cmax_n_times = max(feature['properties']['n_times'] for feature in geojson_data['features'])
+cmax_n_times = 20
 
-print(cmin_n_times)
-print(cmax_n_times)
+print ('min and max times is %s - %s' %(cmin_n_times, cmax_n_times))
 
 # '#FC4C02'
 # create new GeoJson objects to reduce GeoJSON data sent to Folium map as layer
-style_track   = lambda x: {'color': '#11f52f', 'weight': 5} # show some color...
-style_n_times = lambda x: {'color': rgb2hex(cmap((x['properties']['n_times']-cmin_n_times)/(cmax_n_times-cmin_n_times))), 'weight': 5} # cmap needs normalized data
+style_track1   = lambda x: {'color': '#a432a8', 'weight': 5}  
+style_track2   = lambda x: {'color': '#11f52f', 'weight': 5} # #4e32a8 
+#style_track2   = lambda x: {'color': '#11f52f', 'weight': 5}  
+# cmap needs normalized data
+#style_n_times = lambda x: {'color': rgb2hex(cmap((x['properties']['n_times']-cmin_n_times)/(cmax_n_times-cmin_n_times))), 'weight': 5} 
+style_n_times = lambda x: {'color': rgb2hex(cmap((min(cmax_n_times,x['properties']['n_times'])   -cmin_n_times)/(cmax_n_times-cmin_n_times))), 'weight': 5} 
 tooltip_n_times = folium.features.GeoJsonTooltip(fields=['n_times'], aliases=['n_times'])
 
 
@@ -198,7 +221,8 @@ for n in range(0, n_th, 1):
     # popup=df_counters['Name'][point], icon=folium.Icon(color='darkblue', icon_color='white', icon='male', angle=0, prefix='fa')).add_to(marker_cluster)
 
 # add recent tracks        
-folium.GeoJson(geojson_data_track_recent, style_function=style_track, name='Recent tracks', show=True, smooth_factor=3.0).add_to(fmap)
+folium.GeoJson(geojson_data_track_recent1, style_function=style_track1, name='7-90d', show=True, smooth_factor=3.0).add_to(fmap)
+folium.GeoJson(geojson_data_track_recent2, style_function=style_track2, name='last 7 days', show=True, smooth_factor=3.0).add_to(fmap)
 
 # add layer control widget
 folium.LayerControl(collapsed=False).add_to(fmap)
@@ -214,82 +238,3 @@ if os.path.isfile(html_file):
 fmap.save(html_file)
 # open html file in default browser
 webbrowser.open(html_file, new=2, autoraise=True)
-
-
-#ingest_file_list = glob.glob(os.path.join(dir_gpx_processed, '*.gpx'))
-#n_files = len(ingest_file_list)
-#print('found %s files to process ' %(n_files))                              
-
-
-
-#epsilon  = 1.0 # [m]
-#dist_min = 1.0 # 1.0, 75752 to 65536, 5386531 master.geojson file size 
-#dist_max = 100.0 # dont plot lines this far away
-#
-#
-#
-##geojson_file = os.path.join(dir_work, 'master_thin.geojson')
-#geojson_file = 'master_thin_min_'+str(int(dist_min))+'_max_'+str(int(dist_max))+'.geojson'
-#
-#print(os.path.isfile(geojson_file))
-#
-## read geojson file
-#with open(geojson_file, 'r') as file:
-#    geojson_data = geojson.load(file)
-#
-#features_tracks  = []
-#features_n_times = []
-#
-#for feature in geojson_data['features']:
-#    line = geojson.LineString(feature['geometry']['coordinates'])
-#    n_times = feature['properties']['n_times']
-#    features_tracks.append(geojson.Feature(geometry=line))
-#    features_n_times.append(geojson.Feature(geometry=line, properties={'n_times': n_times}))
-#    
-#geojson_data_track = geojson.FeatureCollection(features_tracks)
-#geojson_data_n_times = geojson.FeatureCollection(features_n_times)
-#    
-#
-#
-#cmin_n_times = min(feature['properties']['n_times'] for feature in geojson_data['features'])
-#cmax_n_times = max(feature['properties']['n_times'] for feature in geojson_data['features'])
-#
-#print(cmin_n_times)
-#print(cmax_n_times)
-#
-## create new GeoJson objects to reduce GeoJSON data sent to Folium map as layer
-#style_track = lambda x: {'color': '#FC4C02', 'weight': 5} # show some color...
-#
-#style_n_times = lambda x: {'color': rgb2hex(cmap((x['properties']['n_times']-cmin_n_times)/(cmax_n_times-cmin_n_times))), 'weight': 5} # cmap needs normalized data
-#tooltip_n_times = folium.features.GeoJsonTooltip(fields=['n_times'], aliases=['n_times'])
-#
-## set up Folium map
-##fmap = folium.Map(tiles = None, prefer_canvas=True, disable_3d=True)
-##fmap = folium.Map(tiles='Stamen Terrain', prefer_canvas=True, disable_3d=True)
-#fmap = folium.Map(tiles='Stamen Terrain', location=[37.862606, -121.978372], zoom_start=10) 
-#folium.TileLayer(tiles = 'OpenStreetMap', name='OpenStreetMap', show=False).add_to(fmap)
-#folium.TileLayer(tiles = 'Stamen Terrain', name='Terrain Map', show=True).add_to(fmap)
-#cmap = cm.get_cmap('jet') # matplotlib colormap
-#
-#
-#print('appending features to map ')
-#
-#folium.GeoJson(geojson_data_track, style_function=style_track, name='track', show=True, smooth_factor=3.0).add_to(fmap)
-#folium.GeoJson(geojson_data_n_times, style_function=style_n_times, tooltip=tooltip_n_times, name='n_times', show=False, smooth_factor=3.0).add_to(fmap)
-#        
-##fmap
-#
-## add layer control widget
-#folium.LayerControl(collapsed=False).add_to(fmap)
-#
-## save map to html file
-#fmap.fit_bounds(fmap.get_bounds())
-#
-##html_file = os.path.join(dir_work, 'heatmap.html')
-#html_file = 'heatmap_'+str(int(dist_min))+'_max_'+str(int(dist_max))+'.html'
-#
-#if os.path.isfile(html_file):
-#    os.system('rm -f '+html_file)
-#fmap.save(html_file)
-## open html file in default browser
-#webbrowser.open(html_file, new=2, autoraise=True)
