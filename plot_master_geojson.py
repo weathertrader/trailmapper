@@ -221,8 +221,8 @@ for n in range(0, n_th, 1):
     # popup=df_counters['Name'][point], icon=folium.Icon(color='darkblue', icon_color='white', icon='male', angle=0, prefix='fa')).add_to(marker_cluster)
 
 # add recent tracks        
-folium.GeoJson(geojson_data_track_recent1, style_function=style_track1, name='7-90d', show=True, smooth_factor=3.0).add_to(fmap)
-folium.GeoJson(geojson_data_track_recent2, style_function=style_track2, name='last 7 days', show=True, smooth_factor=3.0).add_to(fmap)
+# folium.GeoJson(geojson_data_track_recent1, style_function=style_track1, name='7-90d', show=True, smooth_factor=3.0).add_to(fmap)
+# folium.GeoJson(geojson_data_track_recent2, style_function=style_track2, name='last 7 days', show=True, smooth_factor=3.0).add_to(fmap)
 
 # add layer control widget
 folium.LayerControl(collapsed=False).add_to(fmap)

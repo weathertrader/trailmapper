@@ -15,13 +15,14 @@ Inline-style:
 
 ## Installation
 
-Clone the repo and enter the dictory.  
+Clone the repo and build the image. 
 
-Create the python environment and change to it
+`docker build -t tm_image .`
 
-`conda env create -f environment.yml`
+Run the image with an attached volume.
 
-`conda activate env_gis`
+`docker run -it --rm -v $(pwd):/app --name=tm_cont tm_image /bin/bash`
+
 
 ## Run Instructions
 
