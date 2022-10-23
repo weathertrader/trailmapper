@@ -7,25 +7,6 @@
 
 
 """
-#manual_debug = True
-manual_debug = False
-if (manual_debug):
-    dir_work = '/home/craigmatthewsmith/gps_tracks'
-    os.chdir(dir_work)
-    dir_gpx     = 'data/gpx' 
-    dir_geojson = 'data/geojson'
-else: # parse command line parameters
-    dir_work = os.getcwd()
-    parser = argparse.ArgumentParser(description = 'process gpx files to geojson')
-    parser.add_argument('--dir_gpx',     type=str, default='data/gpx',     help = 'data of gpx files')
-    parser.add_argument('--dir_geojson', type=str, default='data/geojson', help = 'data of geojson files')
-    args = parser.parse_args()    
-    dir_gpx     = args.dir_gpx 
-    dir_geojson = args.dir_geojson 
-
-#gpx_file_temp = os.path.join(dir_work, 'data_input_gpx/Afternoon_Run55.gpx')
-#print(os.path.isfile(gpx_file_temp))
-
 
 use_RDP  = True
 # rdp thinning 
@@ -53,46 +34,6 @@ dist_max_between_points_to_make_line = 100.0 # dont plot lines this far away
 process_name = 'process_files'
 time_start = time.time()
 
-lat_all = []
-lon_all = []
-ele_all = []
-dt_all  = []
-
-f = 100
-#for f in range(0, 20, 1):
-#for f in range(0, 50, 1):
-for f in range(0, n_files, 1):
-    if (f%20 == 0):
-        print('  processing f %s of %s ' %(f, n_files)) 
-
-    #lat_lon_temp = []
-
-    # rename and archive gpx file 
-    gpx_file_name_archive = gpx_file_temp.replace(file_name,dt_temp[0].strftime('%Y-%m-%d_%H-%M'))
-    # print('    gpx_file_name_archive is %s ' %(gpx_file_name_archive))
-    if not (gpx_file_temp == gpx_file_name_archive):
-        if (' ' in gpx_file_temp):
-            temp_command = 'mv -f "'+gpx_file_temp+'" '+gpx_file_name_archive
-        else:
-            temp_command = 'mv -f '+gpx_file_temp+' '+gpx_file_name_archive
-        os.system(temp_command)
-        
-    if (f == 0):
-        lat_all = lat_temp
-        lon_all = lon_temp
-        ele_all = ele_temp
-        dt_all  = dt_temp
-    else: 
-        lat_all = np.hstack([lat_all, lat_temp])
-        lon_all = np.hstack([lon_all, lon_temp])
-        ele_all = np.hstack([ele_all, ele_temp])
-        dt_all  = np.hstack([ dt_all,  dt_temp])
-    del lon_temp, lat_temp, ele_temp, dt_temp 
-    n_points_all = len(lat_all)
-    #print('  %s total points ' %(n_points_all))    
-
-print('eps %5.1f %s total points ' %(epsilon, n_points_all))    
-n_time_visited = np.full([n_points_all], 1, dtype=int)
 
 time_end   = time.time()
 process_dt = (time_end-time_start)/60.0
@@ -100,62 +41,6 @@ print(process_name+' took %5.2f min' %(process_dt))
 
 
 
-process_name = 'thin nearby points'
-time_start = time.time()
-
-# count and reduce nearby points
-n = 10000
-for n in range(0, n_points_all, 1):
-    if (n%10000 == 0):
-        print('  processing n %s of %s ' %(n, n_points_all)) 
-    lat_temp = lat_all[n]
-    lon_temp = lon_all[n]
-    ele_temp = ele_all[n]
-    #print(lat_temp, lon_temp, ele_temp)
-    #dist_temp = (lat_all-lat_temp)**2.0 + (lon_all-lon_temp)**2
-    #print(np.shape(dist_temp))
-    #print(np.shape(dist_temp))
-    #print(np.min(dist_temp))
-    #print(np.max(dist_temp))
-    #dist_temp
-
-    if not (np.isnan(lon_temp)):
-        dist_temp = calc_dist_between_one_point_to_all_points(lon_temp, lat_temp, lon_all, lat_all)
-        index_close = np.argwhere(dist_temp < dist_min_aggregate_points)
-        n_nearby_points = len(index_close)
-        #print('    found %s nearby points ' %(n_nearby_points)) 
-        if (n_nearby_points > 1):
-            lon_avg = np.mean(lon_all[index_close])
-            lat_avg = np.mean(lat_all[index_close])
-            ele_avg = np.mean(ele_all[index_close])
-            #print(lat_temp, lon_temp, ele_temp)
-            #print(lat_avg, lon_avg, ele_avg)
-            #print(index_close)
-            #print(lon_all[index_close])
-            #print(lat_all[index_close])
-            #print(ele_all[index_close])
-            lon_all[index_close] = np.nan
-            lat_all[index_close] = np.nan
-            ele_all[index_close] = np.nan
-            lon_all[n] = lon_avg
-            lat_all[n] = lat_avg
-            ele_all[n] = ele_avg
-            n_time_visited[n] = n_nearby_points
-            del lon_avg, lat_avg, ele_avg
-        del dist_temp, index_close, n_nearby_points
-
-print('n_times visited ranges from %5.0f - %5.0f' % (np.nanmin(n_time_visited), np.nanmax(n_time_visited)))
-
-
-n_points_all_old = n_points_all
-#print(np.shape(lat_all))
-mask = ~np.isnan(lat_all)
-lon_all = lon_all[mask] 
-lat_all = lat_all[mask] 
-ele_all = ele_all[mask] 
-n_time_visited = n_time_visited[mask] 
-n_points_all = len(lat_all)
-print('%s dist_min reduced points from %s to %s ' %(dist_min_aggregate_points, n_points_all_old, n_points_all))    
 
 time_end   = time.time()
 process_dt = (time_end-time_start)/60.0
@@ -209,15 +94,8 @@ print(process_name+' took %5.2f min' %(process_dt))
 """
 
 """"
-#import folium
-#import geopandas
-import glob
-import gpxpy
-import geojson
-#import webbrowser
-#import matplotlib.cm as cm
+import geopandas
 #from scipy.signal import medfilt
-
 from utils import calc_dist_from_coords
 from utils import rgb2hex
 from utils import calc_dist_between_two_coords
@@ -228,13 +106,17 @@ from utils import calc_dist_between_one_point_to_all_points
 
 
 import argparse
-import os
-import glob
-import sys
-import numpy as np
-import time
+import folium
 import geojson
+import glob
 import gpxpy
+import matplotlib.cm as cm
+import numpy as np
+import os
+import sys
+import time
+import webbrowser
+
 from utils import RDP
 
 def create_output_file_name_from_input_file(dir_data, input_file):
@@ -340,9 +222,6 @@ def get_list_of_files_to_process(dir_data, file_type):
     print('found %s files to process ' %(n_files))
     return file_list
 
-def plot_gps_tracks(dir_data):
-    file_type = "geojson"
-    file_list = get_list_of_files_to_process(dir_data, file_type)
 
 def process_gps_tracks(dir_data):
     file_type = "gpx"
@@ -358,12 +237,82 @@ def process_gps_tracks(dir_data):
         geojson_track = convert_gpx_track_dict_to_geojson(gpx_track_dict)
         write_geojson_file(geojson_track, output_file)
 
+def plot_gps_tracks(dir_data):
+    file_type = "geojson"
+    file_list = get_list_of_files_to_process(dir_data, file_type)
+    n_files = len(file_list)
+    features_tracks = []
+    for i, input_file in enumerate(file_list):
+        print(f"Processing file {i} of {n_files}")
+        with open(input_file, 'r') as file:
+            geojson_data = geojson.load(file)
+        #geojson_data
+        for feature in geojson_data['features']:
+            line = geojson.LineString(feature['geometry']['coordinates'])
+            features_tracks.append(geojson.Feature(geometry=line))
+
+    geojson_data_features_tracks = geojson.FeatureCollection(features_tracks)
+
+    style_track1   = lambda x: {'color': '#a432a8', 'weight': 5}
+
+    # lat_center, lon_center, zoom_level = 32.862606, -121.978372, 13
+    # lat_center, lon_center, zoom_level = 31.0, -123.0, 11
+    # lat_center, lon_center, zoom_level = 31.5, -119.0, 13
+    # lat_center, lon_center, zoom_level = 32.0, -118.0, 13
+    # lat_center, lon_center, zoom_level = 32.5, -116.0, 13
+    # lat_center, lon_center, zoom_level = 33.0, -116.5, 13
+    lat_center, lon_center, zoom_level = 33.0, -117.0, 11
+    fmap = folium.Map(location=[lat_center, lon_center], tiles='Stamen Terrain', zoom_start=zoom_level, control_scale=True)
+
+    # set up Folium map
+    #fmap = folium.Map(tiles = None, prefer_canvas=True, disable_3d=True)
+    #fmap = folium.Map(tiles='Stamen Terrain', prefer_canvas=True, disable_3d=True)
+    #fmap = folium.Map(tiles='Stamen Terrain', name='Terrain Map', location=[34.862606, -121.978372], zoom_start=10)
+    # folium.TileLayer(tiles = 'Stamen Terrain', name='Terrain Map', show=True).add_to(fmap)
+    folium.TileLayer(tiles = 'CartoDB dark_matter', name='CartoDB', show=False).add_to(fmap)
+    folium.TileLayer(tiles = 'OpenStreetMap', name='OpenStreetMap', show=False).add_to(fmap)
+    cmap = cm.get_cmap('jet') # matplotlib colormap
+    print('appending features to map ')
+
+    # add heatmap
+    #folium.GeoJson(geojson_data_track,   style_function=style_track, name='track', show=True, smooth_factor=3.0).add_to(fmap)
+    # folium.GeoJson(geojson_data_n_times, style_function=style_n_times, tooltip=tooltip_n_times, name='n_times', show=True, smooth_factor=3.0).add_to(fmap)
+    # add th
+    # for n in range(0, n_th, 1):
+    #     #folium.Marker([th_lat[n], th_lon[n]]).add_to(fmap)
+    #     #folium.Marker([th_lat[n], th_lon[n]], fill_color='#43d9de', radius=8).add_to(fmap)
+    #     folium.Marker([th_lat[n], th_lon[n]], fill_color='#43d9de', radius=4).add_to(fmap)
+    #     # popup=df_counters['Name'][point], icon=folium.Icon(color='darkblue', icon_color='white', icon='male', angle=0, prefix='fa')).add_to(marker_cluster)
+
+    # add recent tracks
+    folium.GeoJson(geojson_data_features_tracks, style_function=style_track1, name='individual', show=True, smooth_factor=3.0).add_to(fmap)
+    # folium.GeoJson(geojson_data_track_recent2, style_function=style_track2, name='last 7 days', show=True, smooth_factor=3.0).add_to(fmap)
+
+    # add layer control widget
+    folium.LayerControl(collapsed=False).add_to(fmap)
+
+    # save map to html file
+    #fmap.fit_bounds(fmap.get_bounds())
+
+    # html_file = os.path.join(dir_work, 'heatmap.html')
+    html_file = os.path.join('heatmap.html')
+    #html_file = 'heatmap_'+str(int(dist_min))+'_max_'+str(int(dist_max))+'.html'
+    # html_file = 'heatmap_'+str(int(dist_min_aggregate_points))+'_max_'+str(int(dist_max_between_points_to_make_line))+'.html'
+    if os.path.isfile(html_file):
+        os.system('rm -f '+html_file)
+    fmap.save(html_file)
+    # open html file in default browser
+    webbrowser.open(html_file, new=2, autoraise=True)
+
+
+
+
 """
 Usage 
 
 Plot all tracks. 
 python trailmapper.py --mode process_gps_tracks --dir_data data
-python trailmapper.py --mode plot_geojson --dir_data data
+python trailmapper.py --mode plot_gps_tracks --dir_data data
 
 TODO 
 get list of input gpx files 
@@ -398,6 +347,9 @@ if __name__ == "__main__":
         sys.exit()
     if mode == "process_gps_tracks":
         process_gps_tracks(dir_data)
+    elif mode == "plot_gps_tracks":
+        plot_gps_tracks(dir_data)
+
 
 
 """
