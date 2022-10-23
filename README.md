@@ -19,70 +19,42 @@ Clone the repo and build the image.
 
 `docker build -t tm_image .`
 
+
+## Run Instructions
+
 Run the image with an attached volume.
 
 `docker run -it --rm -v $(pwd):/app --name=tm_cont tm_image /bin/bash`
 
+Move your gpx files into the `data/gpx` directory.
 
-## Run Instructions
-
-Move the example.gpx file into the directory that contains files to process.
-
-`mv example.gpx data/gpx/.`
-
-Process the `gpx` file to geojson
-
+Process the gpx file to geojson with  
 
 ```
-python process_all_gpx_to_master.py --dir_gpx=data/gpx --dir_geojson=data/geojson
+python trailmapper.py --mode process_gps_tracks --dir_data data
 ```
 
-
-Plot the resulting data in a web browser 
-
-```
-python plot_master_geojson.py --dir_geojson=data/geojson
-```
-
-## Scripts 
-
-
-read individual gpx , apply rdp, write to geojson, aggregate all to single with visit counts 
-```
-process_all_gpx_to_master.py
-process_all_gpx_to_master.ipynb
-```
-
-plot master geojson tracks and recent individual tracks 
-```
-plot_master_geojson.py
-plot_master_geojson.ipynb
+And plot the tracks with 
 
 ```
+python trailmapper.py --mode plot_gps_tracks --dir_data data
+
+```
+
+Now navigate to the repository folder and double-click the `heatmap.html` to view the 
+tracks in a web browser.  
+
 
 ## To do 
 
 ### Map
 1. Add RAWS stations
+2. Add Trailheads from Maps
 2. Fix the master geojson colormap so that saturation occurs at 10 
 3. grab tracks via API instead of manually 
 4. thin points
 5. add junctions 
 
 ### Track processing
-- redo rdp algorithm on individual gpx  
+- redo track simplify algorithm on individual gpx using Shapely default RDP   
 - remove stopped data using speed_min 
-
-### Repo 
-- check that environment.yml works 
-- rename repo to myroutemap
-
-## References 
-
-https://github.com/remisalmon/Strava-to-GeoJSON/blob/master/strava_geojson.py
-https://github.com/fhirschmann/rdp/blob/master/rdp/__init__.py
-https://github.com/sebleier/RDP/blob/master/__init__.py
-
-
-
-

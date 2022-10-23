@@ -124,8 +124,23 @@ def create_output_file_name_from_input_file(dir_data, input_file):
     file_type_new = "geojson"
     file_name_new = os.path.basename(input_file).replace("."+file_type_old, "."+file_type_new)
     output_file = os.path.join(dir_data, file_type_new, file_name_new)
-    print(output_file)
+    # print(output_file)
     return output_file
+
+
+def rename_file_if_needed(dir_data, input_file, dt_track0):
+    file_type = "gpx"
+    output_file = os.path.join(dir_data, file_type, dt_track0.strftime('%Y-%m-%d_%H-%M')+"."+file_type)
+    print(f"    old_file_name is {input_file}")
+    print(f"    new_file_name is {output_file}")
+    if not input_file == output_file:
+        if (' ' in input_file):
+            temp_command = 'mv -f "'+input_file+'" '+output_file
+        else:
+            temp_command = 'mv -f '+input_file+' '+output_file
+        os.system(temp_command)
+    return output_file
+
 
 def read_gpx_file(input_file):
 
@@ -147,7 +162,7 @@ def read_gpx_file(input_file):
                     dt_temp.append(point.time)  # convert time to timestamps (s)
 
     n_points = len(lon_temp)
-    print('    read %s points ' %(n_points))
+    print('    Read %s points ' %(n_points))
     gpx_track_dict = {
         "lon_track": lon_temp,
         "lat_track": lat_temp,
@@ -230,7 +245,8 @@ def process_gps_tracks(dir_data):
     for i, input_file in enumerate(file_list):
         print(f"Processing file {i} of {n_files}")
         gpx_track_dict = read_gpx_file(input_file)
-        output_file = create_output_file_name_from_input_file(dir_data, input_file)
+        input_file_renamed = rename_file_if_needed(dir_data, input_file, gpx_track_dict["dt_track"][0])
+        output_file = create_output_file_name_from_input_file(dir_data, input_file_renamed)
         simplify_track_flag = False
         if simplify_track_flag:
             gpx_track_dict = simplify_track(gpx_track_dict)
@@ -243,7 +259,7 @@ def plot_gps_tracks(dir_data):
     n_files = len(file_list)
     features_tracks = []
     for i, input_file in enumerate(file_list):
-        print(f"Processing file {i} of {n_files}")
+        print(f"  Processing file {i} of {n_files}")
         with open(input_file, 'r') as file:
             geojson_data = geojson.load(file)
         #geojson_data
